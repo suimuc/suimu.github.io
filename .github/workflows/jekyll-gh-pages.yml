@@ -15,7 +15,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +37,6 @@ jobs:
           name: jekyll-site
           path: _site
 
-  # Deployment job
   deploy:
     runs-on: ubuntu-latest
     needs: build
