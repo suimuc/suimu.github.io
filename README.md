@@ -1,1 +1,1 @@
-Code of the personal website page: https://doubiiu.github.io/
+Code of the personal website page: https://suimuc.github.io/suimu.github.io/
