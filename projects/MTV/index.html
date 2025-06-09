@@ -1,0 +1,597 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>MTV: Audio-Sync Video Generation with Multi-Stream Temporal Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans&family=Noto+Sans:wght@400;700&family=Castoro:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+    <link rel="icon" href="./static/icon.svg">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+        }
+        .page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .hero-body {
+            padding: 3rem 1.5rem;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .publication-title {
+            font-family: 'Castoro', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #1a3c6d;
+        }
+        .publication-authors, .publication-institutions {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        .publication-authors {
+            font-size: 1.2rem;
+            color: #444;
+        }
+        .publication-institutions {
+            font-size: 1rem;
+            color: #666;
+        }
+        .publication-links .button {
+            margin: 0.5rem;
+            background-color: #1a3c6d;
+            color: white;
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        .publication-links .button:hover {
+            background-color: #15325a;
+            transform: translateY(-2px);
+        }
+        .section {
+            margin-top: 3rem;
+        }
+        .section-title {
+            font-family: 'Castoro', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            color: #1a3c6d;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .video-table {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .video-column {
+            width: 49%;
+            margin-bottom: 1.5rem;
+            background: #fff;
+            padding: 0.75rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        .video-column-controllability {
+            width: 32%;
+            margin-bottom: 1.5rem;
+            background: #fff;
+            padding: 0.75rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        .video-column:hover, .video-column-controllability:hover {
+            transform: translateY(-5px);
+        }
+        .video-table video {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto;
+        }
+        .main-video {
+            width: 100%;
+            max-width: 960px;
+            height: auto;
+            border-radius: 12px;
+            display: block;
+            margin: 2rem auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .prompt-row {
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid #1a3c6d;
+            width: 100%;
+        }
+        .subtitle-row {
+            font-family: 'Castoro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a3c6d;
+            text-align: left;
+            margin-bottom: 0.75rem;
+        }
+        .showcase-subtitle {
+            width: 100%;
+        }
+        .application-subtitle {
+            width: 49%;
+        }
+        .video-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .back-to-top {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            height: 80px;
+            width: 120px;
+            font-size: 1rem;
+            background-color: #1a3c6d;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+        .back-to-top:hover {
+            background-color: #15325a;
+        }
+        .footer {
+            text-align: center;
+            padding: 3rem 0;
+            background: #fff;
+            margin-top: 3rem;
+            border-top: 1px solid #e0e0e0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .footer p {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .footer a {
+            color: #1a3c6d;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-to-top"><a href="#top" style="color: white; text-decoration: none;">Back to Top</a></button>
+    <div class="page-container">
+        <section class="hero">
+            <div class="hero-body">
+                <div class="container is-max-desktop">
+                    <div class="columns is-centered">
+                        <div class="column has-text-centered">
+                            <h1 class="title is-1 publication-title">Audio-Sync Video Generation with Multi-Stream Temporal Control</h1>
+                            <div class="is-size-5 publication-authors">
+                                <span class="author-block">Shuchen Weng<sup>1†</sup>,</span>
+                                <span class="author-block">Haojie Zheng<sup>1,2†</sup>,</span>
+                                <span class="author-block">Chang Zheng<sup>3</sup>,</span>
+                                <span class="author-block">Si Li<sup>3</sup>,</span>
+                                <span class="author-block">Boxin Shi<sup>4,5*</sup>,</span>
+                                <span class="author-block">Xinlong Wang<sup>1*</sup></span>
+                            </div>
+                            <div class="is-size-6 publication-institutions">
+                                <span class="institution-block"><sup>1</sup>Beijing Academy of Artificial Intelligence</span><br>
+                                <span class="institution-block"><sup>2</sup>School of Software and Microelectronics, Peking University</span><br>
+                                <span class="institution-block"><sup>3</sup>School of Artificial Intelligence, Beijing University of Posts and Telecommunications</span><br>
+                                <span class="institution-block"><sup>4</sup>State Key Laboratory for Multimedia Information Processing, School of Computer Science, Peking University</span><br>
+                                <span class="institution-block"><sup>5</sup>National Engineering Research Center of Visual Technology, School of Computer Science, Peking University</span><br>
+                                <!-- <span class="institution-block"><sup></sup>OpenBayes Information Technology Co., Ltd.</span><br> -->
+                                
+                                
+                                <div class="author-notes is-size-6 has-text-grey">
+                                    <span>(† Equal contribution &nbsp; * Corresponding author)</span>
+                                </div>
+                            </div>
+                            <div class="publication-links">
+                                <span class="link-block">
+                                    <a href="" class="external-link button is-normal is-rounded">
+                                        <span class="icon"><i class="ai ai-arxiv"></i></span>
+                                        <span>arXiv</span>
+                                    </a>
+                                </span>
+                                <span class="link-block">
+                                    <a href="" class="external-link button is-normal is-rounded">
+                                        <span class="icon"><i class="fa fa-github"></i></span>
+                                        <span>Code</span>
+                                    </a>
+                                </span>
+                                <span class="link-block">
+                                    <a href="" class="external-link button is-normal is-rounded">
+                                        <span class="icon"><img style="max-width: 100%;" src="static/hf.png" alt="Dataset"></span>
+                                        <span>Demo</span>
+                                    </a>
+                                </span>
+                            </div>
+                            <video class="main-video" src="demo_video.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section class="section">
+            <div class="container is-max-desktop">
+                <h2 class="section-title">Versatile capabilities</h2>
+
+
+                <div class="video-table">
+                    <div class="subtitle-row showcase-subtitle">Character-centric narrative</div>
+                    <div class="video-group">
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... A man in a <span style="color: rgb(148, 98, 6);">brown</span> jacket and a <span style="color: rgb(76, 153, 230);">blue</span> shirt ... talking on a mobile phone ...
+                            </div>
+                            <video src="./Teasers/single_aac.mp4" controls></video>
+                        </div>
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... The driver, who is wearing a <span style="color: rgb(148, 98, 6);">brown</span> leather jacket ... holding the steering ...
+
+                            </div>
+                            <video src="./Teasers/single_aac_1.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row showcase-subtitle">Multi-character interaction</div>
+                    <div class="video-group">
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... A male on the left, wearing a <strong>black</strong> suit ... A woman ... wearing a <span style="color: rgb(142, 30, 10);">red</span> dress ...
+                            </div>
+                            <video src="./Teasers/two_person_aac.mp4" controls></video>
+                        </div>
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... A woman ... wearing a white blouse with <span style="color: rgb(148, 98, 6);">brown</span> hair  ... A male ... <strong>black</strong> buttons ...
+
+                            </div>
+                            <video src="./Teasers/two_person_aac_1.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row showcase-subtitle">Sound-triggered events</div>
+                    <div class="video-group">
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... The focus is on the water's movement as it is poured into the glass from above ...
+                            </div>
+                            <video src="./Teasers/effect_aac.mp4" controls></video>
+                        </div>
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... A person is ascending a dimly lit staircase in a building ...
+
+                            </div>
+                            <video src="./Teasers/effect_aac_1.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row showcase-subtitle">Music-shaped ambiance</div>
+                    <div class="video-group">
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... A young woman ... flowers with <span style="color: rgb(141, 23, 152);">purple</span> and <span style="color: rgb(230, 241, 8);">yellow</span> ... A man ... a dark jacket ...
+                            </div>
+                            <video src="./Teasers/music_aac.mp4" controls></video>
+                        </div>
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... The driver, who is wearing a <span style="color: rgb(148, 98, 6);">brown</span> leather jacket ... holding the steering ...
+
+                            </div>
+                            <video src="./Teasers/music_aac_1.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row showcase-subtitle">Camera movement</div>
+                    <div class="video-group">
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... An old, rusted car driving on a suburban street ... with a <span style="color: rgb(230, 219, 199);">faded white</span> paint job ...
+                            </div>
+                            <video src="./Teasers/camera_aac.mp4" controls></video>
+                        </div>
+                        <div class="video-column">
+                            <div class="prompt-row">
+                                ... A view through an ornate archway into a dimly lit space ... light shines down ...
+
+                            </div>
+                            <video src="./Teasers/camera_aac_1.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+
+
+               
+            </div>
+        </section>
+
+        
+
+
+        <section class="section">
+            <div class="container is-max-desktop">
+                <h2 class="section-title">Application</h2>
+                <div class="video-table">
+                    <div class="subtitle-row application-subtitle">Character creation</div>
+                    <div class="subtitle-row application-subtitle">Keyframe guidance</div>
+                    <div class="video-column">
+                        <div class="prompt-row">
+                            ... Wolf wearing sunglasses and owl wearing suit ...
+                        </div>
+                        <video src="./Application/creation.mp4" controls></video>
+                    </div>
+                    <div class="video-column">
+                        <div class="prompt-row">
+                            ... A woman with blonde hair ... a <span style="color: rgb(243, 33, 33);">red</span> dress with white fur ...
+                        </div>
+                        <video src="./Application/keyframe.mp4" controls></video>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row application-subtitle">Long video generation</div>
+                    <div class="subtitle-row application-subtitle">Scene transitions</div>
+                    <div class="video-column">
+                        <div class="prompt-row">
+                            ... A woman with shoulder-length dark hair ... waering <span style="color: rgb(154, 153, 153);">light-colored</span> blazer ...
+                        </div>
+                        <video src="./Application/long.mp4" controls></video>
+                    </div>
+                    <div class="video-column">
+                        <div class="prompt-row">
+                            ... A dark knight ... horse at a steady gallop across a <span style="color: rgb(152, 202, 99);">vast grassland</span>/<span style="color: rgb(219, 223, 214);">snow-covered</span> field ...
+                        </div>
+                        <video src="./Application/scene.mp4" controls></video>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="section">
+            <div class="container is-max-desktop">
+                <h2 class="section-title">Controllability</h2>
+                <div class="video-table">
+                    <div class="subtitle-row application-subtitle">Event timing</div>
+                    <div class="subtitle-row application-subtitle">Lip motion</div>
+                    <div class="video-column">
+                        <div class="prompt-row">
+                            ... A woman stands in a dimly lit corridor, bathed in a <span style="color: rgb(26, 64, 201);">blue</span> hue ...
+                        </div>
+                        <video src="./Control/event.mp4" controls></video>
+                    </div>
+                    <div class="video-column">
+                        <div class="prompt-row">
+                            ... A man with a beard and long dark hair is performing on stage ...
+                        </div>
+                        <video src="./Control/lip.mp4" controls></video>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row showcase-subtitle">Appearance</div>
+                    <div class="video-group">
+                        <div class="video-column-controllability">
+                            <div class="prompt-row">
+                                ... short dark hair ... a <span style="color: rgb(237, 60, 57);">red</span> long-sleeved shirt ...
+                            </div>
+                            <video src="./Control/appearance_1.mp4" controls></video>
+                        </div>
+                        <div class="video-column-controllability">
+                            <div class="prompt-row">
+                                ... middle dark hair ... a <strong>black</strong> long-sleeved shirt ...
+                            </div>
+                            <video src="./Control/appearance_2.mp4" controls></video>
+                        </div>
+                        <div class="video-column-controllability">
+                            <div class="prompt-row">
+                                ... long dark hair ... a <span style="color: rgb(120, 115, 115);">gray</span> long-sleeved shirt ...
+                            </div>
+                            <video src="./Control/appearance_3.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row showcase-subtitle">Visual mood</div>
+                    <div class="prompt-row">
+                        ... A group of birds is present on a sandy beach with gentle waves ...
+                    </div>
+                    <div class="video-group">
+                        <div class="video-column-controllability">
+                            <!-- <div class="prompt-row">
+                                ... A group of birds is present on a sandy beach with gentle waves ...
+                            </div> -->
+                            <video src="./Control/music_1.mp4" controls></video>
+                        </div>
+                        <div class="video-column-controllability">
+                            <!-- <div class="prompt-row">
+                                ... A group of birds is present on a sandy beach with gentle waves ...
+                            </div> -->
+                            <video src="./Control/music_2.mp4" controls></video>
+                        </div>
+                        <div class="video-column-controllability">
+                            <!-- <div class="prompt-row">
+                                ... A group of birds is present on a sandy beach with gentle waves ...
+                            </div> -->
+                            <video src="./Control/music_3.mp4" controls></video>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+
+        </section>
+
+        <section class="section">
+            <div class="container is-max-desktop">
+                <h2 class="section-title">Comparisons with stat-of-the-art methods</h2>
+                <div class="prompt-row">
+                    ... The man has <span style="color: rgb(120, 115, 115);">gray</span> hair ... The woman has long <strong>black</strong> hair, is wearing a <span style="color: rgb(43, 125, 170);">denim</span> shirt ...
+                </div>
+                <div class="video-table">
+                    <div class="subtitle-row application-subtitle">Ours</div>
+                    <div class="subtitle-row application-subtitle">MM-Diffusion</div>
+                    <div class="video-column">
+                        <video src="./Comparison/dialog/MTV_aac.mp4" controls></video>
+                    </div>
+                    <div class="video-column">
+                        <video src="./Comparison/dialog/mmdiffusion_aac.mp4" controls></video>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row application-subtitle">TempoTokens</div>
+                    <div class="subtitle-row application-subtitle">Xing <em>et al.</em></div>
+                    <div class="video-column">
+                        <video src="./Comparison/dialog/tempotokens_aac.mp4" controls></video>
+                    </div>
+                    <div class="video-column">
+                        <video src="./Comparison/dialog/seeing_and_hearing_aac.mp4" controls></video>
+                    </div>
+                </div>
+
+                <div class="prompt-row">
+                    ... A person stands on a stage with a guitar, illuminated by <span style="color: rgb(230, 30, 30);">red</span> and <span style="color: rgb(120, 115, 119);">purple</span> stage lights ...
+                </div>
+                <div class="video-table">
+                    <div class="subtitle-row application-subtitle">Ours</div>
+                    <div class="subtitle-row application-subtitle">MM-Diffusion</div>
+                    <div class="video-column">
+                        <video src="./Comparison/music/MTV_aac.mp4" controls></video>
+                    </div>
+                    <div class="video-column">
+                        <video src="./Comparison/music/mmdiffusion_aac.mp4" controls></video>
+                    </div>
+                </div>
+
+                <div class="video-table">
+                    <div class="subtitle-row application-subtitle">TempoTokens</div>
+                    <div class="subtitle-row application-subtitle">Xing <em>et al.</em></div>
+                    <div class="video-column">
+                        <video src="./Comparison/music/tempotokens_aac.mp4" controls></video>
+                    </div>
+                    <div class="video-column">
+                        <video src="./Comparison/music/seeing_and_hearing_aac.mp4" controls></video>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="section" id="BibTeX">
+            <div class="container is-max-desktop content">
+                <h2 class="section-title">BibTeX</h2>
+                <pre><code>@article{MTV,
+      title={Audio-Sync Video Generation with Multi-Stream Temporal Control},
+      author={Weng, Shuchen and Zheng, Haojie and Chang, Zheng and Li, Si and Shi, Boxin and Wang, Xinlong},
+      journal={arXiv preprint arXiv:},
+      year={2025}
+}</code></pre>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="columns is-centered">
+                    <div class="column is-8">
+                        <div class="content">
+                            <p>
+                                Website content is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+                            </p>
+                            <p>
+                                Website source code based on the <a href="https://nerfies.github.io/">Nerfies</a> project page. If you want to reuse their <a href="https://github.com/nerfies/nerfies.github.io">source code</a>, please credit them appropriately.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
