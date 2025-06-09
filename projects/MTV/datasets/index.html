@@ -1,0 +1,1407 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Audio-Sync Video Generation with Multi-Stream Temporal Control</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+
+    <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+          rel="stylesheet" />
+    <link rel="stylesheet" href="./static/css/bulma.min.css" />
+    <link rel="stylesheet" href="./static/css/bulma-carousel.min.css" />
+    <link rel="stylesheet" href="./static/css/bulma-slider.min.css" />
+    <link rel="stylesheet" href="./static/css/fontawesome.all.min.css" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" />
+    <link rel="stylesheet" href="./static/css/index.css" />
+    <link rel="icon" href="./static/icon.svg" />
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script defer src="./static/js/fontawesome.all.min.js"></script>
+    <script src="./static/js/bulma-carousel.min.js"></script>
+    <script src="./static/js/bulma-slider.min.js"></script>
+    <style>
+/* Styles for audio group under each specific video */
+.video-cell-with-audio {
+  vertical-align: top;
+  padding-bottom: 10px;
+}
+
+.video-specific-audio-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 5px;
+  width: 256px; /* Ensure this matches your video width or desired width */
+  box-sizing: border-box;
+}
+
+.audio-player-compact-item {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+  padding: 0 1px; /* Prevent buttons from touching */
+  box-sizing: border-box;
+}
+
+.audio-player-compact-item .audio-label-compact {
+  display: block;
+  font-size: 10px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+  height: 12px;
+  line-height: 12px;
+}
+
+/* Custom Play Button Style */
+.custom-play-button {
+  background-color: #ffffff;
+  border: 1px solid #000000;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 3px;
+  width: 100%; /* Make button take full width of its container */
+  height: 30px;
+  box-sizing: border-box;
+  transition: background-color 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.custom-play-button:hover {
+  background-color: #f0f0f0;
+}
+
+.custom-play-button:focus,
+.custom-play-button:active {
+  outline: 2px solid #005fcc;
+  outline-offset: 0px;
+  background-color: #e0e0e0;
+}
+
+/* Icon Styling */
+.custom-play-button .icon-play,
+.custom-play-button .icon-pause {
+  display: none; /* Base state: hide both */
+}
+
+.custom-play-button:not(.is-playing) .icon-play {
+  display: inline-block; /* Show play icon when button does NOT have .is-playing */
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 7px 0 7px 11px;
+  border-color: transparent transparent transparent #000000;
+}
+
+.custom-play-button.is-playing .icon-pause {
+  display: inline-block; /* Show pause icon when button HAS .is-playing */
+  width: 10px;
+  height: 12px;
+  position: relative;
+}
+
+.custom-play-button.is-playing .icon-pause::before,
+.custom-play-button.is-playing .icon-pause::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 3px; /* Width of each bar of the pause icon */
+  height: 100%; /* Height of each bar */
+  background-color: #000000;
+}
+
+.custom-play-button.is-playing .icon-pause::before {
+  left: 0px; /* Position of the first bar */
+}
+
+.custom-play-button.is-playing .icon-pause::after {
+  right: 0px; /* Position of the second bar */
+}
+
+.audio-player-compact-item .custom-audio-element {
+  display: none; /* Hide the default audio controls */
+}
+
+/* NEW CSS CLASS FOR SECTION TITLES (e.g., "1. Talking head...", "2. Single character...") */
+.section-title-h2 {
+  font-size: 1.8rem; /* Standardized smaller size for these titles */
+  margin-top: 0em;   /* As per your original preference */
+  margin-bottom: 0.5rem; /* Space below title */
+  text-align: left;  /* Modern replacement for align="left" */
+}
+
+.video-16-9-container {
+  position: relative;
+  /* width is set inline on the div to match original video widths, e.g., style="width: 256px;" */
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background-color: #111; /* Dark background for the container */
+}
+
+.video-16-9-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Scales video to fill container, cropping if necessary */
+}
+
+/* Updated styles for authors, institutions, and title */
+.publication-title {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+  text-align: center; /* Explicitly center the title */
+}
+
+.publication-authors {
+  font-size: 1.4rem; /* Slightly larger font for author names */
+  margin-bottom: 1rem; /* Reduced margin to bring authors closer to institutions */
+  text-align: center; /* Center the author names */
+  line-height: 1.2; /* Reduced line-height for tighter spacing */
+}
+
+.publication-institutions {
+  font-size: 1.2rem; /* Smaller font for institutions */
+  text-align: center; /* Center the institutions */
+  line-height: 1.2; /* Reduced line-height for tighter spacing */
+  margin-bottom: 1rem; /* Reduced margin for consistency */
+}
+
+.author-notes {
+  color: #666666; /* Grey color for author notes († and ‡ explanations) */
+  text-align: center; /* Center the author notes */
+  line-height: 1.2; /* Reduced line-height for tighter spacing */
+}
+</style>
+
+</head>
+<body>
+  <div class="page-container">
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">Audio-Sync Video Generation with Multi-Stream Temporal Control</h1>
+            <div class="publication-authors">
+              <span class="author-block">
+                  <div class="publication-authors">
+                      <span class="author-block">Shuchen Weng<sup>1†</sup>,</span>
+                      <span class="author-block">Haojie Zheng<sup>1,2†</sup>,</span>
+                      <span class="author-block">Chang Zheng<sup>3</sup>,</span>
+                      <span class="author-block">Si Li<sup>3</sup>,</span>
+                      <span class="author-block">Boxin Shi<sup>4,5‡</sup>,</span>
+                      <span class="author-block">Xinlong Wang<sup>1‡</sup></span>
+                  </div>
+                  <div class="publication-institutions">
+                      <span class="institution-block"><sup>1</sup>Beijing Academy of Artificial Intelligence</span><br>
+                      <span class="institution-block"><sup>2</sup>School of Software and Microelectronics, Peking University</span><br>
+                      <span class="institution-block"><sup>3</sup>School of Artificial Intelligence, Beijing University of Posts and Telecommunications</span><br>
+                      <span class="institution-block"><sup>4</sup>State Key Laboratory for Multimedia Information Processing, School of Computer Science, Peking University</span><br>
+                      <span class="institution-block"><sup>5</sup>National Engineering Research Center of Visual Technology, School of Computer Science, Peking University</span><br>
+                      <div class="author-notes is-size-7">
+                          <span>(† Equal contribution   ‡ Corresponding author)</span>
+                      </div>
+                  </div>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <a href="#top"></a>
+  <p>&nbsp;</p>
+    <section style="padding: 0;margin-top: -25px;" class="section hero">
+      <div class="container is-max-desktop">
+        <div class="item">
+          <div class="column-video" style="border-radius:10px;justify-content: center;align-items: center; font-size: 100px;">
+            <iframe width="960" height="540"
+                    src="../mtv_demo_video.mp4"
+                    frameborder="0" allowfullscreen="allowfullscreen">
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+  <p>&nbsp;</p>
+  <h2 style="margin-top: 0em; font-size: 2.0rem; text-align: left;" id="talking_head_container_viz"><a name="image-results-viz" id="image-results-viz"></a>Visualization of subset divsion</h2>
+
+  <hr />
+  <h2 class="section-title-h2" id="talking_head_container"><a name="image-results" id="image-results"></a>Basic face</h2>
+  <table width="1024" align="center" style="margin: 0 auto; border-spacing: 0; border-collapse: separate;">
+    <tbody>
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./talking_face/aQO91AicrTA_5_2s_2.00.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/aQO91AicrTA_5_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/aQO91AicrTA_5_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/aQO91AicrTA_5_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./talking_face/ASUOMIUaR50_30_2s_2.00.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/ASUOMIUaR50_30_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/ASUOMIUaR50_30_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/ASUOMIUaR50_30_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./talking_face/Czb5Ml9VDsI_3_2s_2.00.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/Czb5Ml9VDsI_3_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/Czb5Ml9VDsI_3_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/Czb5Ml9VDsI_3_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./talking_face/dhJPm7NolLc_2_2s_2.00.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/dhJPm7NolLc_2_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/dhJPm7NolLc_2_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/dhJPm7NolLc_2_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./talking_face/droRkoEh8iE_2_2s_2.00.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/droRkoEh8iE_2_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/droRkoEh8iE_2_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./talking_face/droRkoEh8iE_2_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./talking_face/eShGoYTlPXw_1_2s_2.00.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/eShGoYTlPXw_1_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/eShGoYTlPXw_1_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/eShGoYTlPXw_1_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./talking_face/fcQq0vbAKjk_2_2s_2.00.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/fcQq0vbAKjk_2_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/fcQq0vbAKjk_2_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/fcQq0vbAKjk_2_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./talking_face/Fs2_62OW6kY_0_2s_2.00.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/Fs2_62OW6kY_0_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/Fs2_62OW6kY_0_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./talking_face/Fs2_62OW6kY_0_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+  <h2 class="section-title-h2" id="single_character_container"><a name="image-results-single" id="image-results-single"></a>Single character</h2>
+  <table width="1024" align="center" style="margin: 0 auto; border-spacing: 0; border-collapse: separate;">
+    <tbody>
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./speaker1/15b76fe838cd1907527b84a18945cbc629efac5a_62307_62724_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker1/15b76fe838cd1907527b84a18945cbc629efac5a_62307_62724_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="/speaker1/15b76fe838cd1907527b84a18945cbc629efac5a_62307_62724_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="/speaker1/15b76fe838cd1907527b84a18945cbc629efac5a_62307_62724_2s_2.00_h264_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./speaker1/5d30c015b177b80a96f71c277b254f7114ff3113_60300_60702_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker1/5d30c015b177b80a96f71c277b254f7114ff3113_60300_60702_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker1/5d30c015b177b80a96f71c277b254f7114ff3113_60300_60702_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker1/5d30c015b177b80a96f71c277b254f7114ff3113_60300_60702_2s_2.00_h264_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker1/74d35ec7bfd033632f98ca65b8409d412a89554c_79668_79788_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/74d35ec7bfd033632f98ca65b8409d412a89554c_79668_79788_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/74d35ec7bfd033632f98ca65b8409d412a89554c_79668_79788_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/74d35ec7bfd033632f98ca65b8409d412a89554c_79668_79788_2s_2.00_h264_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker1/9c0876d99df0de54ad5960910fbd23bd483d7e50_52149_52359_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/9c0876d99df0de54ad5960910fbd23bd483d7e50_52149_52359_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/9c0876d99df0de54ad5960910fbd23bd483d7e50_52149_52359_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/9c0876d99df0de54ad5960910fbd23bd483d7e50_52149_52359_2s_2.00_h264_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./speaker1/9c65be6f1f533e298a462dc74925faea41272c33_99651_99822_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker1/9c65be6f1f533e298a462dc74925faea41272c33_99651_99822_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker1/9c65be6f1f533e298a462dc74925faea41272c33_99651_99822_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker1/9c65be6f1f533e298a462dc74925faea41272c33_99651_99822_2s_2.00_h264_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker1/b0861500a16ea809807849dc54406200ae8a3408_47817_48060_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/b0861500a16ea809807849dc54406200ae8a3408_47817_48060_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/b0861500a16ea809807849dc54406200ae8a3408_47817_48060_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/b0861500a16ea809807849dc54406200ae8a3408_47817_48060_2s_2.00_h264_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker1/e46a2304dac64150c01e9ad4dd881af190a86a78_105021_105174_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/e46a2304dac64150c01e9ad4dd881af190a86a78_105021_105174_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/e46a2304dac64150c01e9ad4dd881af190a86a78_105021_105174_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/e46a2304dac64150c01e9ad4dd881af190a86a78_105021_105174_2s_2.00_h264_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker1/ed615837d465140efccf1ac795e6046e1e27efcd_95793_96006_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/ed615837d465140efccf1ac795e6046e1e27efcd_95793_96006_2s_2.00_h264_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/ed615837d465140efccf1ac795e6046e1e27efcd_95793_96006_2s_2.00_h264_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker1/ed615837d465140efccf1ac795e6046e1e27efcd_95793_96006_2s_2.00_h264_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+  <h2 class="section-title-h2" id="multiple_character_container"><a name="image-results-single" id="image-results-single"></a>Multiple characters</h2>
+  <table width="1024" align="center" style="margin: 0 auto; border-spacing: 0; border-collapse: separate;">
+    <tbody>
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./speaker-multi/00123745_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/00123745_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/00123745_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/00123745_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./speaker-multi/00260093_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/00260093_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/00260093_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/00260093_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker-multi/20408458698e45c393726d311870d33c_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/20408458698e45c393726d311870d33c_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/20408458698e45c393726d311870d33c_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/20408458698e45c393726d311870d33c_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker-multi/c4269a1ee6195eb0180f8c3ce808012cfb481316_7815_8073_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/c4269a1ee6195eb0180f8c3ce808012cfb481316_7815_8073_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/c4269a1ee6195eb0180f8c3ce808012cfb481316_7815_8073_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/c4269a1ee6195eb0180f8c3ce808012cfb481316_7815_8073_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./speaker-multi/d79219ec6b595643dc9b7f3c5e3362769f994df6_24276_24498_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/d79219ec6b595643dc9b7f3c5e3362769f994df6_24276_24498_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/d79219ec6b595643dc9b7f3c5e3362769f994df6_24276_24498_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./speaker-multi/d79219ec6b595643dc9b7f3c5e3362769f994df6_24276_24498_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker-multi/db31bd4951752dfe4e236c3556ceb177218a8c7d_37125_37404_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/db31bd4951752dfe4e236c3556ceb177218a8c7d_37125_37404_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/db31bd4951752dfe4e236c3556ceb177218a8c7d_37125_37404_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/db31bd4951752dfe4e236c3556ceb177218a8c7d_37125_37404_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker-multi/f09fc2acf8f5351625bccd7739c45d67225df106_84699_84927_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/f09fc2acf8f5351625bccd7739c45d67225df106_84699_84927_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/f09fc2acf8f5351625bccd7739c45d67225df106_84699_84927_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/f09fc2acf8f5351625bccd7739c45d67225df106_84699_84927_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./speaker-multi/f8dbc4de363c1fe6bc8b37a24b6719c8b8bcf461_38406_38748_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/f8dbc4de363c1fe6bc8b37a24b6719c8b8bcf461_38406_38748_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/f8dbc4de363c1fe6bc8b37a24b6719c8b8bcf461_38406_38748_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./speaker-multi/f8dbc4de363c1fe6bc8b37a24b6719c8b8bcf461_38406_38748_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+  <h2 class="section-title-h2" id="single_character_container"><a name="image-results-single" id="image-results-single"></a>Sound event</h2>
+  <table width="1024" align="center" style="margin: 0 auto; border-spacing: 0; border-collapse: separate;">
+    <tbody>
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./effect/00262316_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/00262316_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/00262316_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/00262316_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./effect/0e0486f37aa856d9fb75c2ecaac1c499ab0e73fb_41076_41208_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/0e0486f37aa856d9fb75c2ecaac1c499ab0e73fb_41076_41208_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/0e0486f37aa856d9fb75c2ecaac1c499ab0e73fb_41076_41208_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/0e0486f37aa856d9fb75c2ecaac1c499ab0e73fb_41076_41208_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./effect/1501f4edd4700d4309a4879c6abc8c050d946c61_84693_84837_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/1501f4edd4700d4309a4879c6abc8c050d946c61_84693_84837_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/1501f4edd4700d4309a4879c6abc8c050d946c61_84693_84837_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/1501f4edd4700d4309a4879c6abc8c050d946c61_84693_84837_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./effect/19b191b60677de2c926bb43ca58350accbd4e082_44088_44238_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/19b191b60677de2c926bb43ca58350accbd4e082_44088_44238_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/19b191b60677de2c926bb43ca58350accbd4e082_44088_44238_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/19b191b60677de2c926bb43ca58350accbd4e082_44088_44238_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./effect/1fb0f0710777c6d90d9d6c96ea8d925625f5607d_85500_85701_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/1fb0f0710777c6d90d9d6c96ea8d925625f5607d_85500_85701_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/1fb0f0710777c6d90d9d6c96ea8d925625f5607d_85500_85701_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./effect/1fb0f0710777c6d90d9d6c96ea8d925625f5607d_85500_85701_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./effect/3924c0d622fb1ed5e0d6f6ccdbf8529fb7916e2b_45390_45522_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/3924c0d622fb1ed5e0d6f6ccdbf8529fb7916e2b_45390_45522_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/3924c0d622fb1ed5e0d6f6ccdbf8529fb7916e2b_45390_45522_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/3924c0d622fb1ed5e0d6f6ccdbf8529fb7916e2b_45390_45522_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./effect/74a8760b03cfdb62dfe4ae1c05bc521d99235c11_119892_120060_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/74a8760b03cfdb62dfe4ae1c05bc521d99235c11_119892_120060_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/74a8760b03cfdb62dfe4ae1c05bc521d99235c11_119892_120060_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/74a8760b03cfdb62dfe4ae1c05bc521d99235c11_119892_120060_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./effect/fe7b634238539d325497ee9af285487c2b935e4c_22983_23124_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/fe7b634238539d325497ee9af285487c2b935e4c_22983_23124_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/fe7b634238539d325497ee9af285487c2b935e4c_22983_23124_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./effect/fe7b634238539d325497ee9af285487c2b935e4c_22983_23124_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+  <h2 class="section-title-h2" id="single_character_container"><a name="image-results-single" id="image-results-single"></a>Visual mood</h2>
+  <table width="1024" align="center" style="margin: 0 auto; border-spacing: 0; border-collapse: separate;">
+    <tbody>
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./music/78fe14201b95cd4f0c4be142d89520a60a1b75f0_94449_94587_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/78fe14201b95cd4f0c4be142d89520a60a1b75f0_94449_94587_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/78fe14201b95cd4f0c4be142d89520a60a1b75f0_94449_94587_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/78fe14201b95cd4f0c4be142d89520a60a1b75f0_94449_94587_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./music/9ccaf08f6178dc73ece7d930cfd339508533daa0_76110_76494_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/9ccaf08f6178dc73ece7d930cfd339508533daa0_76110_76494_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/9ccaf08f6178dc73ece7d930cfd339508533daa0_76110_76494_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 2 row 1">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/9ccaf08f6178dc73ece7d930cfd339508533daa0_76110_76494_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./music/a32d9944c1b808614e5807027675c40d4c087ada_99747_99942_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/a32d9944c1b808614e5807027675c40d4c087ada_99747_99942_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/a32d9944c1b808614e5807027675c40d4c087ada_99747_99942_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/a32d9944c1b808614e5807027675c40d4c087ada_99747_99942_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./music/bb17af1a6a4c6b4687d7daf9b8448aea599b02a2_25011_25458_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/bb17af1a6a4c6b4687d7daf9b8448aea599b02a2_25011_25458_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/bb17af1a6a4c6b4687d7daf9b8448aea599b02a2_25011_25458_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 1"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/bb17af1a6a4c6b4687d7daf9b8448aea599b02a2_25011_25458_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+
+      <tr>
+        <th class="video-cell-with-audio">
+          <div class="video-16-9-container" style="width: 256px;">
+          <video width="256" src="./music/e46a2304dac64150c01e9ad4dd881af190a86a78_118236_118500_2s_2.00_h264.mp4" loop controls></video>
+          </div>
+          <div class="video-specific-audio-group">
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Speech</span>
+              <button class="custom-play-button" aria-label="Play Speech for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/e46a2304dac64150c01e9ad4dd881af190a86a78_118236_118500_2s_2.00_dialog.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Effects</span>
+              <button class="custom-play-button" aria-label="Play Effects for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/e46a2304dac64150c01e9ad4dd881af190a86a78_118236_118500_2s_2.00_effect.wav" preload="metadata"></audio>
+            </div>
+            <div class="audio-player-compact-item">
+              <span class="audio-label-compact">Music</span>
+              <button class="custom-play-button" aria-label="Play Music for video 1 row 2">
+                <span class="icon-play"></span><span class="icon-pause"></span>
+              </button>
+              <audio class="custom-audio-element" src="./music/e46a2304dac64150c01e9ad4dd881af190a86a78_118236_118500_2s_2.00_music.wav" preload="metadata"></audio>
+            </div>
+          </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./music/ec9c28002ef8417b48a044086e9a1bcdee04c214_160264_160422_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/ec9c28002ef8417b48a044086e9a1bcdee04c214_160264_160422_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/ec9c28002ef8417b48a044086e9a1bcdee04c214_160264_160422_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 2 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/ec9c28002ef8417b48a044086e9a1bcdee04c214_160264_160422_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./music/f0b972d135ac500363d1d17f9ac8e89524efaf09_29961_30114_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/f0b972d135ac500363d1d17f9ac8e89524efaf09_29961_30114_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/f0b972d135ac500363d1d17f9ac8e89524efaf09_29961_30114_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 3 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/f0b972d135ac500363d1d17f9ac8e89524efaf09_29961_30114_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+        <th class="video-cell-with-audio">
+            <div class="video-16-9-container" style="width: 256px;">
+            <video width="256" src="./music/fadb0afd2e8179ac5d4461cc604784997b6ce2a6_19302_19470_2s_2.00_h264.mp4" loop controls></video>
+            </div>
+            <div class="video-specific-audio-group">
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Speech</span>
+                    <button class="custom-play-button" aria-label="Play Speech for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/fadb0afd2e8179ac5d4461cc604784997b6ce2a6_19302_19470_2s_2.00_dialog.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Effects</span>
+                    <button class="custom-play-button" aria-label="Play Effects for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/fadb0afd2e8179ac5d4461cc604784997b6ce2a6_19302_19470_2s_2.00_effect.wav" preload="metadata"></audio>
+                </div>
+                <div class="audio-player-compact-item">
+                    <span class="audio-label-compact">Music</span>
+                    <button class="custom-play-button" aria-label="Play Music for video 4 row 2"><span class="icon-play"></span><span class="icon-pause"></span></button>
+                    <audio class="custom-audio-element" src="./music/fadb0afd2e8179ac5d4461cc604784997b6ce2a6_19302_19470_2s_2.00_music.wav" preload="metadata"></audio>
+                </div>
+            </div>
+        </th>
+      </tr>
+    </tbody>
+  </table>
+
+<script>
+// Custom Audio Player Logic
+document.addEventListener('DOMContentLoaded', () => {
+  const allCustomPlayButtons = document.querySelectorAll('.custom-play-button');
+
+  allCustomPlayButtons.forEach(playButton => {
+    const container = playButton.closest('.audio-player-compact-item');
+    if (!container) {
+      // console.error("Could not find container for button", playButton);
+      return;
+    }
+    const audio = container.querySelector('.custom-audio-element');
+    const initialAriaLabel = playButton.getAttribute('aria-label') || '';
+
+    if (audio) {
+      playButton.addEventListener('click', () => {
+        // console.log(`Button clicked for ${audio.src}. Is paused: ${audio.paused}, Is ended: ${audio.ended}, Current time: ${audio.currentTime}`);
+        if (audio.paused || audio.ended) {
+          // If audio ended, reset currentTime to play from start
+          if (audio.ended) {
+            audio.currentTime = 0;
+          }
+          audio.play().catch(e => console.error("Error trying to play audio:", audio.src, e));
+        } else {
+          audio.pause();
+        }
+      });
+
+      audio.addEventListener('play', () => {
+        // console.log(`Play event for ${audio.src}. Adding 'is-playing' class.`);
+        playButton.classList.add('is-playing');
+        if (initialAriaLabel) playButton.setAttribute('aria-label', initialAriaLabel.replace(/Play|Resume/i, 'Pause'));
+
+        // Pause all OTHER custom audio elements
+        document.querySelectorAll('.custom-audio-element').forEach(otherAudio => {
+          if (otherAudio !== audio && !otherAudio.paused) {
+            // console.log(`Pausing other audio: ${otherAudio.src} due to ${audio.src} playing.`);
+            otherAudio.pause(); // This will trigger the 'pause' event on otherAudio
+          }
+        });
+      });
+
+      audio.addEventListener('pause', () => { // Catches both user pause and programmatic pause
+        // console.log(`Pause event for ${audio.src}. Ended: ${audio.ended}, Current time: ${audio.currentTime}`);
+        // The 'ended' event also fires a 'pause' event.
+        // We only want to update UI if it's a genuine pause or if it has ended (to reset icon).
+        if (!audio.ended || audio.currentTime > 0) { // If not ended OR if it ended but we want to show play icon
+             playButton.classList.remove('is-playing');
+             if (initialAriaLabel) {
+               // Update ARIA label to "Play" or "Resume" depending on context, here simplifying to "Play"
+               playButton.setAttribute('aria-label', initialAriaLabel.replace(/Pause/i, 'Play'));
+             }
+        }
+         // If audio ended and currentTime is 0, the 'ended' listener will handle class removal.
+      });
+
+      audio.addEventListener('ended', () => {
+        // console.log(`Ended event for ${audio.src}. Removing 'is-playing' class.`);
+        playButton.classList.remove('is-playing');
+        if (initialAriaLabel) playButton.setAttribute('aria-label', initialAriaLabel.replace(/Pause/i, 'Play'));
+        audio.currentTime = 0; // Reset for next play
+      });
+
+    } else {
+      // console.error("Could not find audio element for button", playButton);
+    }
+  });
+});
+
+
+// Original scripts from your template (ensure they don't conflict if they also handle video/audio play/pause)
+// It seems the original scripts below are mostly for video hover effects and carousels,
+// so they should not directly conflict with the custom audio player logic above.
+
+const videoContainer = document.querySelector('.video-container'); // Note: Your HTML doesn't seem to have a an element with class 'video-container' for this specific script.
+const video = document.querySelector('video'); // This will select the FIRST video element on the page. Might not be what you intend for this generic script.
+const hoverImage = document.querySelector('.hover-image'); // Also check if '.hover-image' exists where intended.
+const caption = document.querySelector('.caption'); // And '.caption'.
+
+if (videoContainer && video && hoverImage && caption) { // This block might not execute if elements are not found.
+  videoContainer.addEventListener('mouseenter', () => {
+      video.pause();
+      hoverImage.style.display = 'block';
+      caption.style.display = 'block';
+  });
+
+  videoContainer.addEventListener('mouseleave', () => {
+      video.play();
+      hoverImage.style.display = 'none';
+      caption.style.display = 'none';
+  });
+}
+
+window.dataLayer = window.dataLayer || [];
+function gtag() { dataLayer.push(arguments); }
+gtag('js', new Date());
+gtag('config', 'G-PYVRSFMDRL');
+
+window.addEventListener('DOMContentLoaded', (event) => {
+      const videoWrappers = document.querySelectorAll('.video-wrapper'); // Check if '.video-wrapper' elements exist.
+      videoWrappers.forEach(wrapper => {
+        const defaultVideo = wrapper.querySelector('.default-video'); // Check for '.default-video'
+        const hoverVideo = wrapper.querySelector('.hover-video');   // Check for '.hover-video'
+        if (defaultVideo && hoverVideo) {
+          if (defaultVideo.videoWidth > 0 && defaultVideo.videoHeight > 0 && wrapper.offsetWidth > 0) {
+            const aspectRatio = defaultVideo.videoWidth / defaultVideo.videoHeight;
+            const height = wrapper.offsetWidth / aspectRatio;
+            wrapper.style.height = `${height}px`;
+          }
+          wrapper.addEventListener('mouseenter', () => { defaultVideo.pause(); hoverVideo.play(); });
+          wrapper.addEventListener('mouseleave', () => { defaultVideo.play(); hoverVideo.pause(); });
+        }
+      });
+    });
+$(document).ready(function() {
+      var carouselItems = $('.carousel .item'); // Check if '.carousel .item' exists.
+      if (carouselItems.length > 0) {
+          var numItems = carouselItems.length;
+          var numVideos = 5;
+          var currentIndex = 0;
+          $('.carousel').on('click', function() {
+            currentIndex++;
+            if (currentIndex + numVideos <= numItems) {
+                carouselItems.removeClass('active').slice(currentIndex, currentIndex + numVideos).addClass('active');
+            } else {
+                currentIndex = 0;
+                carouselItems.removeClass('active').slice(currentIndex, currentIndex + numVideos).addClass('active');
+            }
+          });
+          carouselItems.slice(currentIndex, currentIndex + numVideos).addClass('active');
+      }
+    });
+</script>
+
+</div>
+</body>
+</html>
