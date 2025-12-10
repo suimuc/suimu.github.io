@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio-sync Video Instance Editing with Granularity-Aware Mask Refiner</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* ================= 字体定义 (保持你提供的) ================= */
+        /* cyrillic-ext */
+        @font-face {
+          font-family: 'Inter'; font-style: normal; font-weight: 300; font-display: swap;
+          src: url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2JL7W0Q5n-wU.woff2) format('woff2');
+          unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+        }
+        /* ... (此处省略了中间重复的字体定义，实际使用时保留你原本的即可) ... */
+        /* latin */
+        @font-face {
+          font-family: 'Inter'; font-style: normal; font-weight: 800; font-display: swap;
+          src: url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2) format('woff2');
+          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+                /* 小标题样式 */
+        .sample-title {
+            font-size: 1.1rem;      /* 比正文稍微大一点 */
+            font-weight: 700;       /* 加粗 */
+            color: #111827;         /* 深黑色，突出显示 */
+            margin-bottom: 10px;    /* 和下面的 Prompt 保持间距 */
+            display: flex;
+            align-items: center;
+        }
+
+        /* 这是一个可选的装饰，让标题前面有个小蓝块，更有设计感 */
+        .sample-title::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 16px;
+            background-color: var(--primary-color);
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        /* ================= 基础样式 ================= */
+        :root {
+            --primary-color: #2563eb; 
+            --bg-color: #f8f9fa;      
+            --card-bg: #ffffff;       
+            --text-main: #1f2937;     
+            --text-sub: #6b7280;      
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* 更柔和的阴影 */
+            --radius: 16px; /* 更圆润一点 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* ================= 顶部 Hero Card (新修改) ================= */
+        .hero-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            background: linear-gradient(120deg, #1f2937, #2563eb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            margin-top: 0;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .authors {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .authors a {
+            text-decoration: none;
+            color: inherit;
+            margin: 0 8px;
+            transition: color 0.2s;
+        }
+        
+        .authors a:hover {
+            color: #1e40af;
+            text-decoration: underline;
+        }
+
+        .affiliations {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            margin-bottom: 12px;
+        }
+
+        .notes {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 25px;
+        }
+
+        /* 按钮组样式 (新增) */
+        .link-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px; /* 按钮和视频之间的距离 */
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            background-color: #1f2937; /* 深黑灰，很有科技感 */
+            color: white;
+            padding: 10px 24px;
+            border-radius: 9999px; /* 胶囊形状 */
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn i {
+            margin-right: 8px; /* 图标和文字的间距 */
+        }
+
+        .btn:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        /* 视频样式调整 */
+        .hero-video-wrapper {
+            width: 100%;
+            border-radius: var(--radius);
+            overflow: hidden; /* 防止视频圆角溢出 */
+            background: #000;
+            margin-top: 10px;
+        }
+
+        /* ================= 通用 Section 样式 ================= */
+        section {
+            margin-bottom: 80px;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+            display: inline-block;
+            color: #111827;
+        }
+
+        video {
+            width: 100%;
+            display: block; /* 消除底部空隙 */
+        }
+        
+        img {
+            width: 100%;
+            border-radius: var(--radius);
+            object-fit: cover;
+        }
+
+        .prompt-box {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 18px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            color: #1e40af;
+            text-align: center;
+        }
+
+        /* 布局卡片 */
+        .sample-container {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+            border: 1px solid rgba(0,0,0,0.03); /* 微妙的边框 */
+        }
+
+        /* Grid Layouts */
+        .grid-scenarios {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .grid-optional {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .comparison-header {
+            display: grid;
+            grid-template-columns: 1fr 0.6fr 2fr;
+            gap: 20px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .comparison-methods {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .label {
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* 新增：通用的3列网格布局 */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3列等宽 */
+            gap: 20px;
+            align-items: center; /* 垂直居中 */
+            margin-bottom: 20px; /* 行与行之间的间距 */
+        }
+
+        /* BibTeX 代码块样式 */
+        .bibtex-box {
+            background-color: #f3f4f6;   /* 浅灰背景，区别于普通的白色卡片 */
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;   /* 微妙的边框 */
+            overflow-x: auto;            /* 防止代码过长撑破页面 */
+            font-family: 'Courier New', Courier, monospace; /* 等宽字体 */
+            font-size: 0.9rem;
+            color: #374151;              /* 深灰代码色 */
+            line-height: 1.5;
+            margin: 0;                   /* 去除默认边距 */
+        }
+
+        /* 这是一个小细节：选中代码时的颜色 */
+        .bibtex-box::selection {
+            background: #bfdbfe; /* 淡蓝色选区 */
+            color: #1e3a8a;
+        }
+
+        /* 手机端适配：变成单列 */
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .hero-card {
+                padding: 20px;
+            }
+            .grid-scenarios, .grid-optional, .comparison-methods, .comparison-header {
+                grid-template-columns: 1fr;
+            }
+            .link-buttons {
+                flex-direction: column; /* 手机上按钮垂直排列 */
+            }
+            .btn {
+                width: 100%; /* 手机上按钮充满宽度 */
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="hero-card">
+        <h1>Audio-sync Video Instance Editing with <br>Granularity-Aware Mask Refiner</h1>
+        
+        <div class="authors">
+            Haojie Zheng<sup>1,2†</sup> &nbsp;&nbsp;&nbsp;
+            Shuchen Weng<sup>2†</sup> &nbsp;&nbsp;&nbsp;
+            Jingqi Liu<sup>1,2</sup> &nbsp;&nbsp;&nbsp;
+            Siqi Yang<sup>2</sup>
+            <br>
+            Boxin Shi<sup>1‡</sup> &nbsp;&nbsp;&nbsp;
+            Xinlong Wang<sup>2‡</sup>
+        </div>
+
+        <div class="affiliations">
+            <span><sup>1</sup>Peking University</span> &nbsp;&nbsp;
+            <span><sup>2</sup>Beijing Academy of Artificial Intelligence</span>
+        </div>
+
+        <div class="notes">
+            <span><sup>†</sup> Equal contributions</span> &nbsp;&nbsp;&nbsp;&nbsp;
+            <span><sup>‡</sup> Corresponding author</span>
+        </div>
+
+        <div class="link-buttons">
+            <a href="" class="btn" target="_blank">
+                <i class="fas fa-file-pdf"></i> arXiv
+            </a>
+            <a href="" class="btn" target="_blank">
+                <i class="fab fa-github"></i> Code
+            </a>
+            <a href="" class="btn" target="_blank">
+                <i class="fas fa-layer-group"></i> Model Weights
+            </a>
+        </div>
+
+        <div class="hero-video-wrapper">
+            <video controls playsinline>
+                <source src="AVI-Edit-demo.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <p style="color: var(--text-sub); margin-top: 15px; font-size: 0.95rem;">
+            (For the best experience, please enable the audio)
+        </p>
+    </div>
+
+    <section>
+        <h2 class="section-title">1. Representative application scenarios</h2>
+        
+        <div class="sample-container">
+            <div class="sample-title">(a) Speech Modification</div>
+
+            <div class="prompt-box"> ... A woman with <span style="color: #d97706; font-weight: bold;">blonde</span> hair, wearing a <span style="color: #2563eb; font-weight: bold;">blue</span> coat ... says, "No, please. When the latkes are frying, the kitchen should be closed." ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="teaser/1/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="teaser/1/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="teaser/1/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-container">
+            <div class="sample-title">(b) Appearance Alteration</div>
+
+            <div class="prompt-box"> ... A young man wearing a flat cap, dark shirt, and a <span style="color: #6d3d05; font-weight: bold;">camel-colored</span> coat is walking along a sidewalk ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="teaser/2/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="teaser/2/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="teaser/2/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-container">
+            <div class="sample-title">(c) Semantic Category Transformation</div>
+
+            <div class="prompt-box"> ... A <span style="color: #b8b5b2; font-weight: bold;">white</span> cat with a wistful expression is sitting on the floor ... letting out a soft "meow" ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="teaser/3/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="teaser/3/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="teaser/3/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="sample-container">
+            <div class="sample-title">(d) Audio-Driven Dynamics Adjustment</div>
+
+            <div class="prompt-box"> ... A warmly lit, domestic bathroom ... a close-up shot of a faucet, with water flowing ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="teaser/4/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="teaser/4/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="teaser/4/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <section>
+        <h2 class="section-title">2. Additional application scenarios</h2>
+
+        <div class="sample-container">
+            <div class="sample-title">(a) Instance Insertion</div>
+
+            <div class="prompt-box"> ... A vintage station wagon with a two-tone paint job, primarily <span style="color: #731808; font-weight: bold;">red</span> and <span style="color: #b8b5b2; font-weight: bold;">white</span> ... enters the scene from the right ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="additional_application/1/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="additional_application/1/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="additional_application/1/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-container">
+            <div class="sample-title">(b) Instance Removal</div>
+
+            <div class="prompt-box"> ... Restore the masked region naturally, keeping the original scene consistent ... preserving the style ... of the surrounding content ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="additional_application/2/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="additional_application/2/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="additional_application/2/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-container">
+            <div class="sample-title">(c) Audio-Sync Video Generation</div>
+
+            <div class="prompt-box"> ... A man is riding on horseback ... wearing a <span style="color: #cf3d3d; font-weight: bold;">red</span> jacket and a <span style="color: #b8b5b2; font-weight: bold;">white</span> shirt ... the camera follows the riders from a side perspective ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <img src="additional_application/3/white.png" alt="Input Image" style="border: 1px solid #000;">
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <img src="additional_application/3/white.png" alt="Mask Image" style="border: 1px solid #000;">
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="additional_application/3/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-container">
+            <div class="sample-title">(d) Long-Duration Video Editing</div>
+
+            <div class="prompt-box"> ... A <span style="color: #b8b5b2; font-weight: bold;">white</span> woman with shoulder-length black hair ... wearing a <span style="color: #b8b5b2; font-weight: bold;">white</span> long-sleeved sweater ...</div>
+            <div class="grid-scenarios">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="additional_application/4/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="additional_application/4/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="additional_application/4/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <section>
+        <h2 class="section-title">3. Optional control contexts</h2>
+
+        <div class="sample-container">
+            <div class="sample-title">(a) Scrrible Control</div>
+
+            <div class="prompt-box"> ... A woman wears a <span style="color: #7c2d11; font-weight: bold;">burgundy</span> coat over a grey shirt ... a pendant hanging ... says, "I really admire his books, and he is famous." ...</div>
+            <div class="grid-optional">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="control/scribble/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="control/scribble/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Scribble</div>
+                    <img src="control/scribble/hed.png" alt="Reference">
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="control/scribble/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sample-container">
+            <div class="sample-title">(b) Pose Control</div>
+
+            <div class="prompt-box"> ... Two women are engaged in a conversation ... the woman on the left, with long hair and wearing a <span style="color: #0d598b; font-weight: bold;">blue</span> top ...</div>
+            <div class="grid-optional">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="control/pose/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="control/pose/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Pose</div>
+                    <img src="control/pose/pose.png" alt="Reference">
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="control/pose/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-container">
+            <div class="sample-title">(c) Reference Control</div>
+
+            <div class="prompt-box"> ... A <span style="color: #000000; font-weight: bold;">black</span> jeep begins to drive away from its parking spot ... the camera follows its movement, catching the car as it eases onto the street ...</div>
+            <div class="grid-optional">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="control/reference/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="control/reference/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Reference</div>
+                    <img src="control/reference/reference.png" alt="Reference">
+                </div>
+                <div>
+                    <div class="label">Result</div>
+                    <video controls playsinline><source src="control/reference/out.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+
+    </section>
+
+    <section>
+        <h2 class="section-title">4. Comparison with state-of-the-art methods</h2>
+        <div class="sample-container">
+            <div class="prompt-box"> ... A man wearing a <span style="color: #0722b9; font-weight: bold;">blue</span> jacket with a <span style="color: #c21010; font-weight: bold;">red</span> inner shirt whose collar is folded outward ... says, "They erase me, but I remember everything." ...</div>
+
+            <div class="comparison-grid">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="comparison/1/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="comparison/1/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label"><strong>AVI-Edit (Ours)</strong></div>
+                    <video controls playsinline style="border: 2px solid var(--primary-color); box-sizing: border-box;">
+                        <source src="comparison/1/ours.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+
+            <div class="comparison-grid">
+                <div>
+                    <div class="label">AvED</div>
+                    <video controls playsinline><source src="comparison/1/aved.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Ovi</div>
+                    <video controls playsinline><source src="comparison/1/ovi.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">VACE-Foley</div>
+                    <video controls playsinline><source src="comparison/1/hunyuan-foley.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="sample-container">
+            <div class="prompt-box"> ... A vintage car is driving along a winding road with hedges and trees ... it is colored <span style="color: #031267; font-weight: bold;">dark</span> with a shiny exterior ...</div>
+
+            <div class="comparison-grid">
+                <div>
+                    <div class="label">Input</div>
+                    <video controls playsinline><source src="comparison/2/ori.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Mask</div>
+                    <video controls muted playsinline><source src="comparison/2/mask.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label"><strong>AVI-Edit (Ours)</strong></div>
+                    <video controls playsinline style="border: 2px solid var(--primary-color); box-sizing: border-box;">
+                        <source src="comparison/2/ours.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+
+            <div class="comparison-grid">
+                <div>
+                    <div class="label">AvED</div>
+                    <video controls playsinline><source src="comparison/2/aved.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">Ovi</div>
+                    <video controls playsinline><source src="comparison/2/ovi.mp4" type="video/mp4"></video>
+                </div>
+                <div>
+                    <div class="label">VACE-Foley</div>
+                    <video controls playsinline><source src="comparison/2/hunyuan-foley.mp4" type="video/mp4"></video>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <section>
+        <h2 class="section-title">Citation</h2>
+        <div class="sample-container"> <p style="margin-top: 0; margin-bottom: 15px; color: var(--text-sub);">
+                If you find this work useful for your research, please consider citing our paper:
+            </p>
+            
+            <pre class="bibtex-box"><code>@article{avi-edit,
+  title={Audio-sync Video Instance Editing with Granularity-Aware Mask Refiner},
+  author={Zheng, Haojie and Weng, Shuchen and Liu, Jingqi and Yang, Siqi and Shi, Boxin and Wang, Xinlong},
+  journal={xxx},
+  year={2025}
+}</code></pre>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>
