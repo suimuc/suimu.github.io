@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InstructAV2AV: Instruction-Guided Audio-Video Joint Editing</title>
+  <meta name="description" content="Project page for InstructAV2AV: Instruction-Guided Audio-Video Joint Editing." />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================================
+       全局变量与基础重置
+       ========================================= */
+    :root {
+      --bg-color: #0d0d0f;
+      --surface-color: #1a1a1f;
+      --surface-hover: #25252b;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --accent-1: #8b5cf6; /* 紫色 */
+      --accent-2: #3b82f6; /* 蓝色 */
+      --border-color: rgba(255, 255, 255, 0.1);
+      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* =========================================
+       导航栏 (Header)
+       ========================================= */
+    .site-header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: rgba(13, 13, 15, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 1000;
+      padding: 1rem 0;
+    }
+
+    .site-header__inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .wordmark {
+      font-weight: 800;
+      font-size: 1.25rem;
+      text-decoration: none;
+      background: linear-gradient(to right, var(--accent-1), var(--accent-2));
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .site-nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      margin-left: 2rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .site-nav a:hover {
+      color: var(--text-primary);
+    }
+
+    /* =========================================
+       主视觉区 (Hero / Masthead)
+       ========================================= */
+    .page {
+      padding-top: 100px;
+    }
+
+    .masthead {
+      max-width: 1100px;
+      margin: 6rem auto 4rem;
+      text-align: center;
+      padding: 0 2rem;
+      animation: fadeInUp 1s ease-out;
+    }
+
+    .masthead h1 {
+      font-size: clamp(2rem, 4vw, 3.5rem); 
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 2rem;
+      letter-spacing: -0.5px;
+    }
+
+    .title-line {
+      display: block;
+    }
+    
+    .title-subtitle {
+      font-size: clamp(1.1rem, 2.8vw, 2.5rem);
+      font-weight: 800;
+      margin-top: 0.5rem;
+      background: linear-gradient(135deg, #c084fc, #60a5fa);
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: normal;
+    }
+
+    .authors, .affiliations {
+      margin-bottom: 1rem;
+    }
+
+    .authors p {
+      font-size: 1.1rem;
+      color: var(--text-primary);
+    }
+
+    .affiliations p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+
+    .affiliations__note {
+      font-style: italic;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .resource-links {
+      margin-top: 3rem;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .resource-link {
+      background: #2a2a32;
+      color: #e5e7eb;
+      text-decoration: none;
+      padding: 0.75rem 1.75rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: 1px solid #3f3f46;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .resource-link:hover {
+      background: #3f3f46;
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    /* =========================================
+       通用 Section 样式
+       ========================================= */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto 6rem;
+      padding: 0 2rem;
+    }
+
+    .section-head {
+      margin-bottom: 3rem;
+      text-align: center;
+    }
+
+    .section-kicker {
+      color: var(--accent-2);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .section h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+    }
+
+    /* =========================================
+       视频容器与基础卡片
+       ========================================= */
+    .video-shell {
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+
+    video {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #111;
+    }
+
+    .video-card {
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .video-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* =========================================
+       多重展示区 (Storyboard / Tabs)
+       ========================================= */
+    .story-tabs, .switcher-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .story-tab, .switcher-tab {
+      background: var(--surface-color);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+
+    .story-tab:hover, .switcher-tab:hover {
+      background: var(--surface-hover);
+      color: var(--text-primary);
+    }
+
+    .story-tab.is-active, .switcher-tab.is-active {
+      background: var(--accent-1);
+      color: #fff;
+      border-color: var(--accent-1);
+      box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+    }
+
+    /* 面板切换动画 */
+    .story-panel, .switcher-panel {
+      display: none;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    .story-panel.is-active, .switcher-panel.is-active {
+      display: block;
+    }
+
+    .story-layout {
+      background: var(--surface-color);
+      border-radius: 16px;
+      padding: 2rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* =========================================
+       顶部高亮包裹框 (Top Hero Box)
+       ========================================= */
+    .top-hero-box {
+      max-width: 1280px;
+      margin: 0 auto 6rem;
+      background: linear-gradient(180deg, var(--surface-color) 0%, rgba(26,26,31,0.2) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 4rem 1rem 3rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .top-hero-box .masthead {
+      margin-top: 0; 
+      margin-bottom: 4rem;
+    }
+
+    .top-hero-box .section {
+      margin-bottom: 0;
+    }
+
+    .story-brief {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    .story-steps {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .story-step {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .story-step.is-active {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-primary);
+      border-color: var(--text-primary);
+    }
+
+    /* =========================================
+       编辑指令框 (Instruction Box)
+       ========================================= */
+    .instruction-box {
+      background: rgba(139, 92, 246, 0.08);
+      border: 1px dashed rgba(139, 92, 246, 0.4);
+      border-left: 4px solid var(--accent-1);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .instruction-label {
+      color: var(--accent-1);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      margin-top: 0.2rem;
+    }
+
+    .instruction-text {
+      color: var(--text-primary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 1.05rem;
+      line-height: 1.5;
+      letter-spacing: 0.2px;
+      font-weight: 400;
+    }
+
+    .global-action-hint {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: -1rem;
+      margin-bottom: 2rem;
+      font-style: italic;
+    }
+
+    /* =========================================
+       视觉焦点特效 (Sequential Playback FX)
+       ========================================= */
+    .story-stage__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #000;
+      position: relative;
+    }
+
+    .story-video-card {
+      position: relative;
+      transition: all 0.4s ease-in-out;
+    }
+
+    .story-video-card__label, .video-label {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      z-index: 10;
+      pointer-events: none;
+      transition: background 0.3s ease;
+    }
+
+    .story-stage__grid.has-playing .story-video-card:not(.is-playing) {
+      opacity: 0.25;
+      filter: grayscale(80%);
+    }
+
+    .story-stage__grid.has-playing .story-video-card.is-playing .story-video-card__label {
+      background: var(--accent-1);
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+    }
+
+    /* =========================================
+       方法对比区全新重构 (Method Comparison Redesign)
+       ========================================= */
+    .compare-card-group {
+      background: rgba(26, 26, 31, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 2.5rem;
+      margin-top: 1.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .compare-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 2fr; /* 黄金比例分栏，左原图，右结果网格 */
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .compare-source {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .compare-results-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr); /* 2x2 网格放置结果，画面最大化 */
+      gap: 1.2rem;
+    }
+
+    .citation-box {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+      overflow-x: auto;
+    }
+
+    .citation-box pre {
+      margin: 0;
+    }
+
+    .citation-box code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      white-space: pre-wrap; /* 允许在窄屏幕下自动换行 */
+    }
+
+    .video-card--ours {
+      border: 2px solid var(--accent-1);
+      box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
+    }
+    
+    .video-card--ours .video-label {
+      background: var(--accent-1);
+      box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+    }
+
+    .video-card--ours:hover {
+      border-color: #a78bfa;
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+    }
+
+    /* =========================================
+       页脚 (Footer)
+       ========================================= */
+    .site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 4rem 2rem;
+      text-align: center;
+      margin-top: 4rem;
+      background: #000;
+    }
+
+    .site-footer__title {
+      font-weight: 800;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .site-footer__copy {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* =========================================
+       动画与响应式
+       ========================================= */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 968px) {
+      .site-header__inner {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .site-nav a {
+        margin: 0 1rem;
+      }
+      .story-stage__grid {
+        grid-template-columns: 1fr;
+      }
+      /* 降级为垂直排列防止视频过小 */
+      .compare-layout {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .compare-results-grid {
+        grid-template-columns: 1fr; /* 极小屏下结果也改为单列 */
+      }
+      .compare-card-group {
+        padding: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="wordmark" href="#top">InstructAV2AV</a>
+      <nav class="site-nav" aria-label="Section Navigation">
+        <a href="#demo">Demo</a>
+        <a href="#teaser">Representative Applications</a>
+        <a href="#applications">Additional Applications</a>
+        <a href="#comparison">Comparison</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    
+    <div class="top-hero-box">
+      <section class="masthead" id="top">
+        <h1>
+          <span class="title-line">InstructAV2AV:</span>
+          <span class="title-line title-subtitle">Instruction-Guided Audio-Video Joint Editing</span>
+        </h1>
+
+        <div class="authors">
+          <p>
+            Haojie Zheng<sup>1,2</sup>,
+            Yixin Yang<sup>2</sup>,
+            Siqi Yang<sup>2</sup>,
+            Shuchen Weng<sup>1,2*</sup>,
+            Boxin Shi<sup>2*</sup>
+          </p>
+        </div>
+
+        <div class="affiliations">
+          <p><span>1</span> Beijing Academy of Artificial Intelligence&nbsp;&nbsp;&nbsp;&nbsp; <span>2</span> Peking University </p>
+          <p class="affiliations__note">* Corresponding authors</p>
+        </div>
+
+        <div class="resource-links">
+          <a class="resource-link" href="#">arXiv</a>
+          <a class="resource-link" href="#">GitHub</a>
+          <a class="resource-link" href="#">Model Weights</a>
+        </div>
+      </section>
+
+      <section class="section" id="demo">
+        <div class="section-head">
+          <h2>Demo</h2>
+        </div>
+        <div class="video-shell">
+          <video src="results/InstructAV2AV_demo.mp4" playsinline controls preload="metadata"></video>
+        </div>
+        <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem;">
+          (For the best experience, please enable the audio and wear headphones)
+        </p>
+      </section>
+    </div>
+
+    <section class="section" id="teaser">
+      <div class="section-head">
+        <h2>Representative Application Scenarios</h2>
+      </div>
+
+      <div class="storyboard">
+        <div class="story-tabs" role="tablist">
+          <button class="story-tab is-active" data-target="teaser-story-1">Identity-Preserving Speech Modification</button>
+          <button class="story-tab" data-target="teaser-story-2">AV Instance Editing</button>
+          <button class="story-tab" data-target="teaser-story-3">AV Instance Insertion</button>
+          <button class="story-tab" data-target="teaser-story-4">AV Instance Removal</button>
+        </div>
+
+        <p class="global-action-hint">
+          ▶️ Tip: Clicking a category tab or a case button will auto-play the input and output videos in sequence.
+        </p>
+
+        <section class="story-panel is-active" id="teaser-story-1">
+          <div class="story-layout">
+            <div class="story-copy">
+              <div class="story-steps">
+                <button class="story-step is-active" data-instruction="Keep the person’s identity and change the spoken words to &quot;This is more than just art, it’s a statement.&quot;" data-video-target="#vid-teaser-1-in" data-src="results/teaser/1-Identity-Preserving Speech Modification/input1.mp4" data-video-out="#vid-teaser-1-out" data-src-out="results/teaser/1-Identity-Preserving Speech Modification/output1.mp4">Case A</button>
+                <button class="story-step" data-instruction="Keep the person’s identity and change the spoken words to &quot;I really think we should try our best to do it.&quot;" data-video-target="#vid-teaser-1-in" data-src="results/teaser/1-Identity-Preserving Speech Modification/input2.mp4" data-video-out="#vid-teaser-1-out" data-src-out="results/teaser/1-Identity-Preserving Speech Modification/output2.mp4">Case B</button>
+              </div>
+              <div class="instruction-box">
+                <span class="instruction-label">Instruction:</span>
+                <span class="instruction-text">Keep the person’s identity and change the spoken words to "This is more than just art, it’s a statement."</span>
+              </div>
+            </div>
+            <div class="story-stage">
+              <div class="video-shell">
+                <div class="story-stage__grid">
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Input</p>
+                    <video id="vid-teaser-1-in" src="results/teaser/1-Identity-Preserving Speech Modification/input1.mp4" playsinline controls></video>
+                  </figure>
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Output</p>
+                    <video id="vid-teaser-1-out" src="results/teaser/1-Identity-Preserving Speech Modification/output1.mp4" playsinline controls></video>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="story-panel" id="teaser-story-2">
+          <div class="story-layout">
+            <div class="story-copy">
+              <div class="story-steps">
+                <button class="story-step is-active" data-instruction="Change the man into a young woman with brown hair, wearing a gray blazer over a light pink top and a necklace with a heart-shaped pendant, and saying, &quot;I really think we should give it another chance.&quot;" data-video-target="#vid-teaser-2-in" data-src="results/teaser/2-Audio-Visual Instance Editing/input1.mp4" data-video-out="#vid-teaser-2-out" data-src-out="results/teaser/2-Audio-Visual Instance Editing/output1.mp4">Case A</button>
+                <button class="story-step" data-instruction="Change the woman in the middle to a man dressed in a dark suit with a tie, and saying, &quot;We need to finalize the proposal by tomorrow.&quot;" data-video-target="#vid-teaser-2-in" data-src="results/teaser/2-Audio-Visual Instance Editing/input2.mp4" data-video-out="#vid-teaser-2-out" data-src-out="results/teaser/2-Audio-Visual Instance Editing/output2.mp4">Case B</button>
+              </div>
+              <div class="instruction-box">
+                <span class="instruction-label">Instruction:</span>
+                <span class="instruction-text">Change the man into a young woman with brown hair, wearing a gray blazer over a light pink top and a necklace with a heart-shaped pendant, and saying, "I really think we should give it another chance."</span>
+              </div>
+            </div>
+            <div class="story-stage">
+              <div class="video-shell">
+                <div class="story-stage__grid">
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Input</p>
+                    <video id="vid-teaser-2-in" src="results/teaser/2-Audio-Visual Instance Editing/input1.mp4" playsinline controls></video>
+                  </figure>
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Output</p>
+                    <video id="vid-teaser-2-out" src="results/teaser/2-Audio-Visual Instance Editing/output1.mp4" playsinline controls></video>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section class="story-panel" id="teaser-story-3">
+          <div class="story-layout">
+            <div class="story-copy">
+              <div class="story-steps">
+                <button class="story-step is-active" data-instruction="Add a dark vintage sedan driving from the right to the left." data-video-target="#vid-teaser-3-in" data-src="results/teaser/3-Audio-Visual Instance Insertion/input1.mp4" data-video-out="#vid-teaser-3-out" data-src-out="results/teaser/3-Audio-Visual Instance Insertion/output1.mp4">Case A</button>
+                <button class="story-step" data-instruction="Add a woman with shoulder-length brown hair near the left person, wearing a gray V-neck top and a silver pendant necklace, and saying &quot;Uh, wow! He was so nice.&quot;" data-video-target="#vid-teaser-3-in" data-src="results/teaser/3-Audio-Visual Instance Insertion/input2.mp4" data-video-out="#vid-teaser-3-out" data-src-out="results/teaser/3-Audio-Visual Instance Insertion/output2.mp4">Case B</button>
+              </div>
+              <div class="instruction-box">
+                <span class="instruction-label">Instruction:</span>
+                <span class="instruction-text">Add a dark vintage sedan driving from the right to the left.</span>
+              </div>
+            </div>
+            <div class="story-stage">
+              <div class="video-shell">
+                <div class="story-stage__grid">
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Input</p>
+                    <video id="vid-teaser-3-in" src="results/teaser/3-Audio-Visual Instance Insertion/input1.mp4" playsinline controls></video>
+                  </figure>
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Output</p>
+                    <video id="vid-teaser-3-out" src="results/teaser/3-Audio-Visual Instance Insertion/output1.mp4" playsinline controls></video>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section class="story-panel" id="teaser-story-4">
+          <div class="story-layout">
+            <div class="story-copy">
+              <div class="story-steps">
+                <button class="story-step is-active" data-instruction="Remove the chipmunk standing on the stone surface among the peanuts." data-video-target="#vid-teaser-4-in" data-src="results/teaser/4-Audio-Visual Instance Removal/input1.mp4" data-video-out="#vid-teaser-4-out" data-src-out="results/teaser/4-Audio-Visual Instance Removal/output1.mp4">Case A</button>
+                <button class="story-step" data-instruction="Remove the small airplane flying low over the lake." data-video-target="#vid-teaser-4-in" data-src="results/teaser/4-Audio-Visual Instance Removal/input2.mp4" data-video-out="#vid-teaser-4-out" data-src-out="results/teaser/4-Audio-Visual Instance Removal/output2.mp4">Case B</button>
+              </div>
+              <div class="instruction-box">
+                <span class="instruction-label">Instruction:</span>
+                <span class="instruction-text">Remove the chipmunk standing on the stone surface among the peanuts.</span>
+              </div>
+            </div>
+            <div class="story-stage">
+              <div class="video-shell">
+                <div class="story-stage__grid">
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Input</p>
+                    <video id="vid-teaser-4-in" src="results/teaser/4-Audio-Visual Instance Removal/input1.mp4" playsinline controls></video>
+                  </figure>
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Output</p>
+                    <video id="vid-teaser-4-out" src="results/teaser/4-Audio-Visual Instance Removal/output1.mp4" playsinline controls></video>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="section" id="applications">
+      <div class="section-head">
+        <h2>Additional Application Scenarios</h2>
+      </div>
+
+      <div class="storyboard">
+        <div class="story-tabs" role="tablist">
+          <button class="story-tab is-active" data-target="app-story-1">Appearance-Preserving Modification</button>
+          <button class="story-tab" data-target="app-story-2">Content-Preserving Modification</button>
+          <button class="story-tab" data-target="app-story-3">Timbre-Preserving Modification</button>
+        </div>
+
+        <p class="global-action-hint">
+          ▶️ Tip: Clicking a category tab or a case button will auto-play the input and output videos in sequence.
+        </p>
+
+        <section class="story-panel is-active" id="app-story-1">
+          <div class="story-layout">
+            <div class="story-copy">
+              <div class="story-steps">
+                <button class="story-step is-active" data-instruction="Keep the person‘s appearance, change the timbre to a man, and change the spoken words to &quot;I understand, but I think we need to consider.&quot;" data-video-target="#vid-app-1-in" data-src="results/application/1-Appearance-Preserving Modification/input1.mp4" data-video-out="#vid-app-1-out" data-src-out="results/application/1-Appearance-Preserving Modification/output1.mp4">Case A</button>
+              </div>
+              <div class="instruction-box">
+                <span class="instruction-label">Instruction:</span>
+                <span class="instruction-text">Keep the person‘s appearance, change the timbre to a man, and change the spoken words to &quot;I understand, but I think we need to consider.&quot;</span>
+              </div>
+            </div>
+            <div class="story-stage">
+              <div class="video-shell">
+                <div class="story-stage__grid">
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Input</p>
+                    <video id="vid-app-1-in" src="results/application/1-Appearance-Preserving Modification/input1.mp4" playsinline controls preload="metadata"></video>
+                  </figure>
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Output</p>
+                    <video id="vid-app-1-out" src="results/application/1-Appearance-Preserving Modification/output1.mp4" playsinline controls preload="metadata"></video>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="story-panel" id="app-story-2">
+          <div class="story-layout">
+            <div class="story-copy">
+              <div class="story-steps">
+                <button class="story-step is-active" data-instruction="Keep the spoken content, and change the man to a woman dressed in a dark blazer over a red sweater." data-video-target="#vid-app-2-in" data-src="results/application/2-Content-Preserving Modification/input1.mp4" data-video-out="#vid-app-2-out" data-src-out="results/application/2-Content-Preserving Modification/output1.mp4">Case A</button>
+              </div>
+              <div class="instruction-box">
+                <span class="instruction-label">Instruction:</span>
+                <span class="instruction-text">Keep the spoken content, and change the man to a woman dressed in a dark blazer over a red sweater.</span>
+              </div>
+            </div>
+            <div class="story-stage">
+              <div class="video-shell">
+                <div class="story-stage__grid">
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Input</p>
+                    <video id="vid-app-2-in" src="results/application/2-Content-Preserving Modification/input1.mp4" playsinline controls preload="metadata"></video>
+                  </figure>
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Output</p>
+                    <video id="vid-app-2-out" src="results/application/2-Content-Preserving Modification/output1.mp4" playsinline controls preload="metadata"></video>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="story-panel" id="app-story-3">
+          <div class="story-layout">
+            <div class="story-copy">
+              <div class="story-steps">
+                <button class="story-step is-active" data-instruction="Keep the timbre, change the woman to a red-haired woman wearing a white shirt, and change the spoken words to &quot;I came here to tell you that you should to go.&quot;" data-video-target="#vid-app-3-in" data-src="results/application/3-Timbre-Preserving Modification/input1.mp4" data-video-out="#vid-app-3-out" data-src-out="results/application/3-Timbre-Preserving Modification/output1.mp4">Case A</button>
+              </div>
+              <div class="instruction-box">
+                <span class="instruction-label">Instruction:</span>
+                <span class="instruction-text">Keep the timbre, change the woman to a red-haired woman wearing a white shirt, and change the spoken words to &quot;I came here to tell you that you should to go.&quot;</span>
+              </div>
+            </div>
+            <div class="story-stage">
+              <div class="video-shell">
+                <div class="story-stage__grid">
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Input</p>
+                    <video id="vid-app-3-in" src="results/application/3-Timbre-Preserving Modification/input1.mp4" playsinline controls preload="metadata"></video>
+                  </figure>
+                  <figure class="story-video-card">
+                    <p class="story-video-card__label">Output</p>
+                    <video id="vid-app-3-out" src="results/application/3-Timbre-Preserving Modification/output1.mp4" playsinline controls preload="metadata"></video>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="section" id="comparison">
+      <div class="section-head">
+        <h2>Comparison with State-of-the-Art Methods</h2>
+      </div>
+
+      <div class="switcher">
+        <div class="switcher-tabs">
+          <button class="switcher-tab is-active" data-target="compare-1">Comparison A</button>
+          <button class="switcher-tab" data-target="compare-2">Comparison B</button>
+        </div>
+
+        <p class="global-action-hint">
+          ▶️ Tip: Clicking a result tab will auto-play the input and output videos in sequence.
+        </p>
+
+        <section class="switcher-panel is-active" id="compare-1">
+          <div class="compare-card-group">
+            
+            <div class="instruction-box" style="margin-bottom: 2rem;">
+              <span class="instruction-label">Instruction:</span>
+              <span class="instruction-text">Change the man into a woman with long dark hair, wearing a red and black checkered shirt, and saying, "Wait, what? That can't be right... Oh no, did I just miss the deadline now?"</span>
+            </div>
+            <div class="compare-layout">
+              <div class="compare-source">
+                <figure class="video-card">
+                  <div class="video-label">Input</div>
+                  <video src="results/compare/results1/input.mp4" playsinline controls></video>
+                </figure>
+              </div>
+              <div class="compare-results-grid">
+                <figure class="video-card">
+                  <div class="video-label">AvED</div>
+                  <video src="results/compare/results1/AvED.mp4" playsinline controls></video>
+                </figure>
+                <figure class="video-card">
+                  <div class="video-label">CoherentAVEdit</div>
+                  <video src="results/compare/results1/CoherentAVEdit.mp4" playsinline controls></video>
+                </figure>
+                <figure class="video-card">
+                  <div class="video-label">AVI-Edit</div>
+                  <video src="results/compare/results1/AVI-Edit.mp4" playsinline controls></video>
+                </figure>
+                <figure class="video-card video-card--ours">
+                  <div class="video-label">InstructAV2AV</div>
+                  <video src="results/compare/results1/InstructAV2AV (Ours).mp4" playsinline controls></video>
+                </figure>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="switcher-panel" id="compare-2">
+          <div class="compare-card-group">
+            
+            <div class="instruction-box" style="margin-bottom: 2rem;">
+              <span class="instruction-label">Instruction:</span>
+              <span class="instruction-text">Make the horse dark brown with a white saddle.</span>
+            </div>
+            <div class="compare-layout">
+              <div class="compare-source">
+                <figure class="video-card">
+                  <div class="video-label">Input</div>
+                  <video src="results/compare/results2/input.mp4" playsinline controls></video>
+                </figure>
+              </div>
+              <div class="compare-results-grid">
+                <figure class="video-card">
+                  <div class="video-label">AvED</div>
+                  <video src="results/compare/results2/AvED.mp4" playsinline controls></video>
+                </figure>
+                <figure class="video-card">
+                  <div class="video-label">CoherentAVEdit</div>
+                  <video src="results/compare/results2/CoherentAVEdit.mp4" playsinline controls></video>
+                </figure>
+                <figure class="video-card">
+                  <div class="video-label">AVI-Edit</div>
+                  <video src="results/compare/results2/AVI-Edit.mp4" playsinline controls></video>
+                </figure>
+                <figure class="video-card video-card--ours">
+                  <div class="video-label">InstructAV2AV</div>
+                  <video src="results/compare/results2/InstructAV2AV (Ours).mp4" playsinline controls></video>
+                </figure>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="citation">
+          <div class="section-head">
+            <h2>Citation</h2>
+          </div>
+          <div class="citation-box">
+            <pre><code>@article{InstructAV2AV,
+      title={InstructAV2AV: Instruction-Guided Audio-Video Joint Editing},
+      author={Zheng, Haojie and Yang, Yixin and Yang, Siqi and Weng, Shuchen and Shi, Boxin},
+      journal={arXiv preprint arXiv:},
+      year={2026}
+}</code></pre>
+          </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="site-footer__title">Contact</p>
+    <p class="site-footer__copy">
+      suimu@stu.pku.edu.cn
+    </p>
+  </footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      
+      // 1. Tab 切换逻辑
+      const setupTabs = (tabSelector, panelSelector) => {
+        const tabs = document.querySelectorAll(tabSelector);
+        tabs.forEach(tab => {
+          tab.addEventListener('click', (e) => {
+            const parent = tab.parentElement;
+            parent.querySelectorAll(tabSelector).forEach(t => t.classList.remove('is-active'));
+            tab.classList.add('is-active');
+
+            const targetId = tab.getAttribute('data-target');
+            const targetPanel = document.getElementById(targetId);
+            const container = parent.parentElement;
+            
+            container.querySelectorAll(panelSelector).forEach(p => p.classList.remove('is-active'));
+            targetPanel.classList.add('is-active');
+            
+            // 切换 Tab 时，暂停所有视频并归零
+            document.querySelectorAll('video').forEach(v => {
+                v.pause();
+                v.currentTime = 0;
+            });
+
+            // --- A. 针对 Story 区域的现有逻辑 ---
+            const firstStep = targetPanel.querySelector('.story-step');
+            if (firstStep && firstStep.hasAttribute('data-video-target')) {
+                targetPanel.dataset.autoSequence = 'true';
+                firstStep.click(); 
+            } 
+            
+            // --- B. 针对 Comparison 区域的新增轮播逻辑 ---
+            else if (tabSelector === '.switcher-tab') {
+                const inVid = targetPanel.querySelector('.compare-source video');
+                // 将 NodeList 转换为 Array 以便按索引操作
+                const outVids = Array.from(targetPanel.querySelectorAll('.compare-results-grid video'));
+                
+                if (inVid && outVids.length > 0) {
+                    // 1. 先播放左侧的原视频
+                    inVid.play().catch(err => console.log("Autoplay blocked:", err));
+                    
+                    // 2. 原视频播放完毕后，播放右侧第一个对比视频
+                    inVid.onended = () => {
+                        outVids[0].currentTime = 0; 
+                        outVids[0].play().catch(err => console.log("Autoplay blocked:", err));
+                    };
+                    
+                    // 3. 循环绑定：当前视频播放完毕后，播放下一个视频
+                    for (let i = 0; i < outVids.length; i++) {
+                        outVids[i].onended = () => {
+                            // 检查是否还有下一个视频
+                            if (i + 1 < outVids.length) {
+                                outVids[i + 1].currentTime = 0;
+                                outVids[i + 1].play().catch(err => console.log("Autoplay blocked:", err));
+                            }
+                            // 如果是最后一个视频播完，这里不需要做任何事，也不会自动跳到下一个 Tab
+                        };
+                    }
+                }
+            }
+          });
+        });
+      };
+
+      // 2. 视频顺序播放控制 (原封不动，仅处理 story-stage__grid 的暗化特效)
+      const setupSequentialPlayback = () => {
+        const grids = document.querySelectorAll('.story-stage__grid');
+        
+        grids.forEach(grid => {
+          const vids = grid.querySelectorAll('video');
+          if(vids.length === 2) {
+            const inVid = vids[0];
+            const outVid = vids[1];
+            const inCard = inVid.closest('.story-video-card');
+            const outCard = outVid.closest('.story-video-card');
+
+            const updateUIFocus = (activeVid) => {
+              if (activeVid === inVid) {
+                grid.classList.add('has-playing');
+                inCard.classList.add('is-playing');
+                outCard.classList.remove('is-playing');
+              } else if (activeVid === outVid) {
+                grid.classList.add('has-playing');
+                outCard.classList.add('is-playing');
+                inCard.classList.remove('is-playing');
+              } else {
+                grid.classList.remove('has-playing');
+                inCard.classList.remove('is-playing');
+                outCard.classList.remove('is-playing');
+              }
+            };
+
+            inVid.addEventListener('play', () => {
+              outVid.pause();
+              outVid.currentTime = 0;
+              updateUIFocus(inVid);
+            });
+
+            inVid.addEventListener('ended', () => {
+              outVid.play().catch(err => console.log("Autoplay blocked:", err)); 
+            });
+
+            outVid.addEventListener('play', () => {
+              inVid.pause();
+              updateUIFocus(outVid);
+            });
+
+            outVid.addEventListener('ended', () => {
+              updateUIFocus(null);
+              
+              const panel = grid.closest('.story-panel');
+              if (panel && panel.dataset.autoSequence === 'true') {
+                const activeStep = panel.querySelector('.story-step.is-active');
+                
+                if (activeStep && activeStep.nextElementSibling) {
+                  setTimeout(() => {
+                    activeStep.nextElementSibling.click();
+                  }, 500); 
+                } else {
+                  panel.dataset.autoSequence = 'false';
+                }
+              }
+            });
+
+            inVid.addEventListener('pause', () => {
+              if(outVid.paused) updateUIFocus(null);
+            });
+            outVid.addEventListener('pause', () => {
+              if(inVid.paused) updateUIFocus(null);
+            });
+          }
+        });
+      };
+
+      // 3. 处理 Case/Pair 按钮点击 (原封不动)
+      const setupVideoSteps = () => {
+        const steps = document.querySelectorAll('.story-step');
+        steps.forEach(step => {
+          if(!step.hasAttribute('data-video-target')) return; 
+
+          step.addEventListener('click', (e) => {
+            if (e.isTrusted) {
+              const panel = step.closest('.story-panel');
+              if (panel) {
+                panel.dataset.autoSequence = 'false';
+              }
+            }
+
+            const parent = step.parentElement;
+            parent.querySelectorAll('.story-step').forEach(s => s.classList.remove('is-active'));
+            step.classList.add('is-active');
+
+            const inTarget = document.querySelector(step.getAttribute('data-video-target'));
+            const outTarget = document.querySelector(step.getAttribute('data-video-out'));
+            
+            if(inTarget && outTarget) { 
+              inTarget.src = step.getAttribute('data-src'); 
+              outTarget.src = step.getAttribute('data-src-out'); 
+              inTarget.play().catch(err => console.log("Autoplay blocked:", err)); 
+            }
+
+            const instructionVal = step.getAttribute('data-instruction');
+            const instructionEl = step.closest('.story-layout').querySelector('.instruction-text');
+            if (instructionEl && instructionVal) {
+              instructionEl.textContent = instructionVal;
+            }
+          });
+        });
+      };
+
+      // 初始化执行
+      setupTabs('.story-tab', '.story-panel');
+      setupTabs('.switcher-tab', '.switcher-panel');
+      setupSequentialPlayback();
+      setupVideoSteps();
+    });
+  </script>
+</body>
+</html>
